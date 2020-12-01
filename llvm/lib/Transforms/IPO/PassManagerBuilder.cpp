@@ -47,6 +47,15 @@
 #include "llvm/Transforms/Vectorize/LoopVectorize.h"
 #include "llvm/Transforms/Vectorize/SLPVectorizer.h"
 
+#include "llvm/Transforms/Obfuscation/BogusControlFlow.h"
+#include "llvm/Transforms/Obfuscation/Flattening.h"
+#include "llvm/Transforms/Obfuscation/Split.h"
+#include "llvm/Transforms/Obfuscation/Substitution.h"
+#include "llvm/CryptoUtils.h"
+
+
+
+
 using namespace llvm;
 
 static cl::opt<bool>
@@ -147,6 +156,25 @@ cl::opt<bool> EnableOrderFileInstrumentation(
     "enable-order-file-instrumentation", cl::init(false), cl::Hidden,
     cl::desc("Enable order file instrumentation (default = off)"));
 
+
+
+// Flags for obfuscation
+static cl::opt<bool> Flattening("fla", cl::init(false),
+                                cl::desc("Enable the flattening pass"));
+
+static cl::opt<bool> BogusControlFlow("bcf", cl::init(false),
+                                      cl::desc("Enable bogus control flow"));
+
+static cl::opt<bool> Substitution("sub", cl::init(false),
+                                  cl::desc("Enable instruction substitutions"));
+
+static cl::opt<std::string> AesSeed("aesSeed", cl::init(""),
+                                    cl::desc("seed for the AES-CTR PRNG"));
+
+static cl::opt<bool> Split("split", cl::init(false),
+                           cl::desc("Enable basic block splitting"));
+
+
 PassManagerBuilder::PassManagerBuilder() {
     OptLevel = 2;
     SizeLevel = 0;
@@ -175,6 +203,13 @@ PassManagerBuilder::PassManagerBuilder() {
     PrepareForThinLTO = EnablePrepareForThinLTO;
     PerformThinLTO = EnablePerformThinLTO;
     DivergentTarget = false;
+
+  // Initialization of the global cryptographically
+  // secure pseudo-random generator
+  if(!AesSeed.empty()) {
+    if(!llvm::cryptoutils->prng_seed(AesSeed.c_str()))
+      exit(1);
+  }
 }
 
 PassManagerBuilder::~PassManagerBuilder() {
@@ -440,6 +475,11 @@ void PassManagerBuilder::populateModulePassManager(
 
   // Allow forcing function attributes as a debugging and tuning aid.
   MPM.add(createForceFunctionAttrsLegacyPass());
+
+  MPM.add(createSplitBasicBlock(Split));
+  MPM.add(createBogus(BogusControlFlow));
+  MPM.add(createFlattening(Flattening));
+  MPM.add(createSubstitution(Substitution));
 
   // If all optimizations are disabled, just run the always-inline pass and,
   // if enabled, the function merging pass.
