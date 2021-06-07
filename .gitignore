@@ -46,6 +46,7 @@ autoconf/autom4te.cache
 # CLion project configuration
 /.idea
 build_release/
+build_debug/
 #==============================================================================#
 # Directories to ignore (do not add trailing '/'s, they skip symlinks).
 #==============================================================================#
