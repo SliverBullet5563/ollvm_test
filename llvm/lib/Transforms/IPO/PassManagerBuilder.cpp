@@ -50,6 +50,7 @@
 #include "llvm/Transforms/Obfuscation/BogusControlFlow.h"
 #include "llvm/Transforms/Obfuscation/Flattening.h"
 #include "llvm/Transforms/Obfuscation/Split.h"
+#include "llvm/Transforms/Obfuscation/StringObf.h"
 #include "llvm/Transforms/Obfuscation/Substitution.h"
 #include "llvm/CryptoUtils.h"
 
@@ -173,6 +174,9 @@ static cl::opt<std::string> AesSeed("aesSeed", cl::init(""),
 
 static cl::opt<bool> Split("split", cl::init(false),
                            cl::desc("Enable basic block splitting"));
+
+static cl::opt<bool> StrObf("strobf", cl::init(false),
+                            cl::desc("Encode string"));
 
 
 PassManagerBuilder::PassManagerBuilder() {
@@ -478,8 +482,13 @@ void PassManagerBuilder::populateModulePassManager(
 
   MPM.add(createSplitBasicBlock(Split));
   MPM.add(createBogus(BogusControlFlow));
+  if(Flattening){
+    MPM.add(createLowerSwitchPass());
+  }
+
   MPM.add(createFlattening(Flattening));
   MPM.add(createSubstitution(Substitution));
+  MPM.add(createStringObf(StrObf));
 
   // If all optimizations are disabled, just run the always-inline pass and,
   // if enabled, the function merging pass.
