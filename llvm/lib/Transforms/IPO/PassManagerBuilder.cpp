@@ -53,6 +53,7 @@
 #include "llvm/Transforms/Obfuscation/StringObf.h"
 #include "llvm/Transforms/Obfuscation/Substitution.h"
 #include "llvm/CryptoUtils.h"
+#include "llvm/Transforms/Obfuscation/StringObfuscation.h"
 
 
 
@@ -177,6 +178,9 @@ static cl::opt<bool> Split("split", cl::init(false),
 
 static cl::opt<bool> StrObf("strobf", cl::init(false),
                             cl::desc("Encode string"));
+
+static cl::opt<bool> StringObf("sobf", cl::init(false),
+                               cl::desc("Enable the string obfuscation"));
 
 
 PassManagerBuilder::PassManagerBuilder() {
@@ -489,6 +493,7 @@ void PassManagerBuilder::populateModulePassManager(
   MPM.add(createFlattening(Flattening));
   MPM.add(createSubstitution(Substitution));
   MPM.add(createStringObf(StrObf));
+  MPM.add(createStringObfuscation(StringObf));
 
   // If all optimizations are disabled, just run the always-inline pass and,
   // if enabled, the function merging pass.
